@@ -48,6 +48,8 @@ class CNN(nn.Module):
     
     def forward(self, x):
         # input should be of shape [b, c, w, h]
+        x = torch.reshape(x, (x.shape[0], 1, 28, 28))
+        
         # conv and relu layers
         x = self.conv1(x)
         x = F.relu(x)
@@ -189,7 +191,6 @@ def main():
     for ii in epochs:
         print('Training epoch {}'.format(ii))
         for X_batch, y_batch in train_dataloader:
-            X_batch = X_batch.view(-1, 1, 28, 28)  # Add this line
             loss = train_batch(
                 X_batch, y_batch, model, optimizer, criterion)
             train_losses.append(loss)
