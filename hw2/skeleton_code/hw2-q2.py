@@ -45,8 +45,6 @@ class CNN(nn.Module):
             self.fc2 = nn.Linear(320, 120)
             self.fc3 = nn.Linear(120, 10) 
         
-        # Implementation for Q2.1 and Q2.2
-        raise NotImplementedError
     
     def forward(self, x):
         # input should be of shape [b, c, w, h]
@@ -191,6 +189,7 @@ def main():
     for ii in epochs:
         print('Training epoch {}'.format(ii))
         for X_batch, y_batch in train_dataloader:
+            X_batch = X_batch.view(-1, 1, 28, 28)  # Add this line
             loss = train_batch(
                 X_batch, y_batch, model, optimizer, criterion)
             train_losses.append(loss)
