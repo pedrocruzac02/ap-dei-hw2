@@ -21,58 +21,65 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         self.no_maxpool = no_maxpool
         if not no_maxpool:
-            # conv1 with 8 output channels, kernel of size 3*3, stride of 1 
-            # padding: (2 x Padding + N - Kernel)/Stride + 1 = 28 <=> Padding = 1
-            self.conv1 = nn.Conv2d(1, 8, 3, padding=1)
+            print("Maxpool = False")
+            self.conv1 = nn.Conv2d(1, 8, 3, stride = 1, padding=1)
             self.max_pool = nn.MaxPool2d(2,2)
-
-            # conv2 with 16 output channels, kernel of size 3x3, stride of 1 
-            self.conv2 = nn.Conv2d(8, 16, 3, padding = 0)
-
-            # input features = #output_channels x output_width x output_height
-            self.fc1 = nn.Linear(6*6*16, 320)
-            self.dropout = nn.Dropout2d(p=dropout_prob)
-            self.fc2 = nn.Linear(320, 120)
-            self.fc3 = nn.Linear(120, 10) 
-
-            
+            self.conv2 = nn.Conv2d(8, 16, 3, stride = 1, padding = 0)
+            self.fc1 = nn.Linear(16*6*6, 320) 
         else:
-            self.conv1 = nn.Conv2d(1, 8, 3, padding=1, stride=2)
-            self.conv2 = nn.Conv2d(8, 16, 3, padding=0, stride=2)
-            self.fc1 = nn.Linear(14*14*16, 320)  # Adjusted for the new output size
+            print("Maxpool = True")
+            self.conv1 = nn.Conv2d(1, 8, 3,stride=2, padding=1)
+            self.conv2 = nn.Conv2d(8, 16, 3,stride=2, padding=0)
+            self.fc1 = nn.Linear(16*7*7, 320)
 
-            self.dropout = nn.Dropout2d(p=dropout_prob)
-            self.fc2 = nn.Linear(320, 120)
-            self.fc3 = nn.Linear(120, 10) 
+        self.dropout = nn.Dropout2d(p=dropout_prob)
+        self.fc2 = nn.Linear(320, 120)
+        self.fc3 = nn.Linear(120, 10) 
         
     
     def forward(self, x):
         # input should be of shape [b, c, w, h]
+        # Batch size = 8 (x.shape[0]), images 28x28 =>
+        # x.shape = [x.shape[0], 1, 28, 28]
         x = torch.reshape(x, (x.shape[0], 1, 28, 28))
-        
-        # conv and relu layers
+  
+        # (2.1) Convolution with 3x3 filter padding = 1,stride = 1 and 8 channels =>
+        # (2.1) x.shape = [x.shape[0], 8, 28, 28] since 28 = (28 - 3 + 2*1)/1 + 1
+        # (2.2) Convolution with 3x3 filter padding = 2,stride = 2 and 8 channels =>
+        # (2.2) x.shape = [x.shape[0], 8, 14, 14] since 14 = (28 - 3 + 2*0)/2 + 1
         x = self.conv1(x)
-        x = F.relu(x)
 
         # max-pool layer if using it
         if not self.no_maxpool:
+            # (2.1) Max pooling with stride of 2 =>
+            # (2.1) x.shape = [x.shape[0], 8, 14, 14] 
             x = self.max_pool(x)
 
-        # conv and relu layers
+        # relu layer
+        x = F.relu(x)
+
+        # (2.1) Convolution with 3x3 filter padding = 0,stride = 1 and 16 channels =>
+        # (2.1) x.shape = [x.shape[0], 16, 12, 12] since 12 = (14 - 3 + 2*0)/1 + 1
+        # (2.2) Convolution with 3x3 filter padding = 0,stride = 2 and 16 channels =>
+        # (2.2) x.shape = [x.shape[0], 16, 7, 7] since 7 = (14 - 3 + 2*0)/2 + 1
         x = self.conv2(x)
+
+        # relu layer
         x = F.relu(x)
 
         # max-pool layer if using it
         if not self.no_maxpool:
+            # (2.1) Max pooling with stride of 2 =>
+            # (2.1) x.shape = [x.shape[0], 16, 6, 6] 
             x = self.max_pool(x)
 
         # prep for fully connected layer + relu
-        x = torch.flatten(x, 1)
-
         if not self.no_maxpool:
-            x = x.view(-1, 6*6*16)
+            # (2.1) x.shape = [x.shape[0], 16, 6, 6]:Reshape => [8,576]
+            x = x.view(-1, 16*6*6)
         else:
-            x = x.view(-1, 14*14*16)
+            # (2.2) x.shape = [x.shape[0], 16, 7, 7]:Reshape => [8,784]
+            x = x.view(-1, 16*7*7)
                
         x = F.relu(self.fc1(x))
 
